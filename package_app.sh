@@ -11,13 +11,16 @@ RESOURCES="$CONTENTS/Resources"
 echo "Building for Release..."
 swift build -c release
 
+# Get the binary path dynamically
+BINARY_PATH=$(swift build -c release --show-bin-path)/$APP_NAME
+
 # Create folder structure
 echo "Creating .app bundle structure..."
 mkdir -p "$MACOS"
 mkdir -p "$RESOURCES"
 
 # Copy binary
-cp ".build/release/$APP_NAME" "$MACOS/"
+cp "$BINARY_PATH" "$MACOS/"
 
 # Copy Info.plist (though it's embedded, keeping it here is standard practice)
 cp "Sources/BrightnessControl/Info.plist" "$CONTENTS/"

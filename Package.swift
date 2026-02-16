@@ -19,7 +19,7 @@ let package = Package(
             name: "BrightnessControl",
             dependencies: [],
             path: "Sources/BrightnessControl",
-            exclude: ["Info.plist"],
+            exclude: ["Info.plist", "BrightnessControl.entitlements"],
             resources: [
                 .process("Assets.xcassets")
             ],
