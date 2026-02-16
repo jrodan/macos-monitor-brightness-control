@@ -1,0 +1,48 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+        
+      - name: Build App
+        run: |
+          chmod +x package_app.sh
+          ./package_app.sh
+          
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BrightnessControl-App
+          path: BrightnessControl.app/
+          
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: BrightnessControl-App
+          path: BrightnessControl.app
+          
+      - name: Create ZIP
+        run: zip -r BrightnessControl.zip BrightnessControl.app
+        
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: BrightnessControl.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

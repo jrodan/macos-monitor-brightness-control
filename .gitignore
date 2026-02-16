@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# Xcode
+build/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# App Bundle
+BrightnessControl.app/
+BrightnessControl.zip
+
+# Misc
+*.swp
+*.lock
+generate_icon.swift
+package_app.sh.log
