@@ -28,8 +28,34 @@ class BrightnessManager: ObservableObject {
         
         checkAutostartStatus()
         setupDisplayCallback()
+        setupBrightnessObserver()
         updateActivationPolicy()
         setupHotKeys()
+    }
+    
+    private func setupBrightnessObserver() {
+        // Poll for changes to internal brightness from OS keys/System Settings
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.syncWithPhysicalBrightness()
+            }
+        }
+    }
+    
+    private func syncWithPhysicalBrightness() {
+        for i in 0..<displays.count {
+            if displays[i].isInternal {
+                let current = getInternalBrightness(for: displays[i].id)
+                if abs(Double(current) - displays[i].brightness) > 0.01 {
+                    displays[i].brightness = Double(current)
+                    
+                    if syncAllDisplays {
+                        // If sync is on, propogate the OS-driven change to others
+                        setBrightness(for: displays[i], to: Double(current))
+                    }
+                }
+            }
+        }
     }
     
     private func setupHotKeys() {
@@ -198,5 +224,18 @@ class BrightnessManager: ObservableObject {
                 _ = fun(id, value)
             }
         }
+    }
+
+    private func getInternalBrightness(for id: CGDirectDisplayID) -> Float {
+        typealias GetBrightness = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Float>) -> Int32
+        var brightness: Float = 0.5
+        if let handle = dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_NOW) {
+            defer { dlclose(handle) }
+            if let sym = dlsym(handle, "DisplayServicesGetBrightness") {
+                let fun = unsafeBitCast(sym, to: GetBrightness.self)
+                _ = fun(id, &brightness)
+            }
+        }
+        return brightness
     }
 }
