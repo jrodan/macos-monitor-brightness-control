@@ -2,12 +2,12 @@ import Foundation
 import Carbon
 
 @MainActor
-class HotKeyManager {
-    static let shared = HotKeyManager()
+public class HotKeyManager {
+    public static let shared = HotKeyManager()
     private var hotKeyRefs: [UInt32: EventHotKeyRef] = [:]
-    var onHotKey: ((UInt32) -> Void)?
+    public var onHotKey: ((UInt32) -> Void)?
 
-    func register(id: UInt32, keyCode: Int, modifiers: UInt32) {
+    public func register(id: UInt32, keyCode: Int, modifiers: UInt32) {
         var hotKeyRef: EventHotKeyRef?
         let hotKeyID = EventHotKeyID(signature: OSType(0x42524947), id: id) // "BRIG"
         
@@ -18,7 +18,7 @@ class HotKeyManager {
         }
     }
 
-    func setupHandler() {
+    public func setupHandler() {
         let eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         
         let pointer = Unmanaged.passUnretained(self).toOpaque()

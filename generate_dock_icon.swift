@@ -13,9 +13,9 @@ let context = NSGraphicsContext.current!.cgContext
 let iconRect = CGRect(x: 100, y: 100, width: 824, height: 824)
 let squirclePath = NSBezierPath(roundedRect: iconRect, xRadius: 180, yRadius: 180)
 
-// Gradient for the background (Deep Blue to Slate)
-let bgGradient = NSGradient(starting: NSColor(calibratedRed: 0.1, green: 0.1, blue: 0.2, alpha: 1.0),
-                            ending: NSColor(calibratedRed: 0.05, green: 0.05, blue: 0.1, alpha: 1.0))!
+// Gradient for the background (Bright Pink to Magenta)
+let bgGradient = NSGradient(starting: NSColor.systemPink,
+                            ending: NSColor.magenta)!
 bgGradient.draw(in: squirclePath, angle: -90)
 
 // 2. The Sun (Yellow Glow)
@@ -49,8 +49,8 @@ for i in 0..<rayCount {
 
 image.unlockFocus()
 
-// Save to the AppIcon set
-let url = URL(fileURLWithPath: "/Users/jrodan/dev/jan/brightness-control-macos/Sources/BrightnessControl/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png")
+// Save to the working directory
+let url = URL(fileURLWithPath: "/Users/jrodan/dev/jan/brightness-control-macos/icon_source.png")
 if let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff) {
     let png = bitmap.representation(using: .png, properties: [:])
     try? png?.write(to: url)

@@ -7,21 +7,24 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "BrightnessControl", targets: ["BrightnessControl"])
+        .executable(name: "BrightnessControl", targets: ["BrightnessControl"]),
+        .library(name: "BrightnessControlCore", targets: ["BrightnessControlCore"])
     ],
-    dependencies: [
-        // External display control often requires DDC/CI
-        // We can try to use a package if available, or implement basic IOKit calls.
-        // For now, let's keep it simple.
-    ],
+    dependencies: [],
     targets: [
+        .target(
+            name: "BrightnessControlCore",
+            dependencies: [],
+            path: "Sources/BrightnessControlCore"
+        ),
         .executableTarget(
             name: "BrightnessControl",
-            dependencies: [],
+            dependencies: ["BrightnessControlCore"],
             path: "Sources/BrightnessControl",
             exclude: ["Info.plist", "BrightnessControl.entitlements"],
             resources: [
-                .process("Assets.xcassets")
+                .copy("MainAppIcon.icns"),
+                .copy("intro.txt")
             ],
             linkerSettings: [
                 .unsafeFlags([
@@ -31,6 +34,11 @@ let package = Package(
                     "-Xlinker", "Sources/BrightnessControl/Info.plist"
                 ])
             ]
+        ),
+        .testTarget(
+            name: "BrightnessControlTests",
+            dependencies: ["BrightnessControlCore"],
+            path: "Tests/BrightnessControlTests"
         )
     ]
 )

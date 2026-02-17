@@ -19,6 +19,10 @@ DerivedData/
 # App Bundle
 BrightnessControl.app/
 BrightnessControl.zip
+brightness-control.rb
+homebrew-tap/
+*.swp
+BrightnessControl.zip
 
 # Misc
 *.swp

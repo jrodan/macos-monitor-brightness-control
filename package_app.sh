@@ -25,10 +25,19 @@ cp "$BINARY_PATH" "$MACOS/"
 # Copy Info.plist (though it's embedded, keeping it here is standard practice)
 cp "Sources/BrightnessControl/Info.plist" "$CONTENTS/"
 
-# Compile Assets (if any)
-if [ -d "Sources/BrightnessControl/Assets.xcassets" ]; then
-    echo "Compiling assets..."
-    xcrun actool "Sources/BrightnessControl/Assets.xcassets" --compile "$RESOURCES" --platform macosx --minimum-deployment-target 14.0 --app-icon AppIcon --output-format xml1
+# Copy resources from the build bundle to the main app resources folder
+echo "Copying resources..."
+BUILD_BUNDLE_PATH=$(find .build -name "${APP_NAME}_${APP_NAME}.bundle" -type d | head -n 1)
+if [ -d "$BUILD_BUNDLE_PATH" ]; then
+    cp -R "$BUILD_BUNDLE_PATH/"* "$RESOURCES/"
+fi
+
+# Manual backup copy of crucial resources (just in case SPM packaging misses them)
+if [ -f "Sources/BrightnessControl/MainAppIcon.icns" ]; then
+    cp "Sources/BrightnessControl/MainAppIcon.icns" "$RESOURCES/"
+fi
+if [ -f "Sources/BrightnessControl/intro.txt" ]; then
+    cp "Sources/BrightnessControl/intro.txt" "$RESOURCES/"
 fi
 
 # Sign the app (with entitlements for hardened runtime capability)

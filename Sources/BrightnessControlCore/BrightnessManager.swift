@@ -4,15 +4,20 @@ import AppKit
 import ServiceManagement
 
 @MainActor
-class BrightnessManager: ObservableObject {
-    @Published var displays: [Display] = []
-    @Published var autostartEnabled: Bool = false
-    @Published var showInDock: Bool = false {
+public class BrightnessManager: ObservableObject {
+    @Published public var displays: [Display] = []
+    @Published public var autostartEnabled: Bool = false
+    @Published public var showInDock: Bool = false {
         didSet {
             updateActivationPolicy()
         }
     }
-    @Published var syncAllDisplays: Bool = false
+    @Published public var syncAllDisplays: Bool = false
+    @Published public var showSceneGallery: Bool = true {
+        didSet {
+            UserDefaults.standard.set(showSceneGallery, forKey: "ShowSceneGallery")
+        }
+    }
     
     private let persistenceKey = "SavedBrightnessLevels"
     private let contrastKey = "SavedContrastLevels"
@@ -20,9 +25,16 @@ class BrightnessManager: ObservableObject {
     private let dockPersistenceKey = "ShowInDock"
     private let syncKey = "SyncAllDisplays"
     
-    init() {
+    public init() {
         self.showInDock = UserDefaults.standard.bool(forKey: dockPersistenceKey)
         self.syncAllDisplays = UserDefaults.standard.bool(forKey: syncKey)
+        
+        let galleryPref = UserDefaults.standard.object(forKey: "ShowSceneGallery")
+        if let val = galleryPref as? Bool {
+            self.showSceneGallery = val
+        } else {
+            self.showSceneGallery = true // Default to true
+        }
         
         refreshDisplays()
         
@@ -76,9 +88,14 @@ class BrightnessManager: ObservableObject {
     }
     
     private func adjustAllBrightness(by delta: Double) {
+        var firstValue: Double?
         for display in displays {
             let newValue = min(max(display.brightness + delta, 0), 1)
             setBrightness(for: display, to: newValue)
+            if firstValue == nil { firstValue = newValue }
+        }
+        if let val = firstValue {
+            OSDManager.shared.show(brightness: val)
         }
     }
     
@@ -97,15 +114,18 @@ class BrightnessManager: ObservableObject {
     }
     
     private func updateActivationPolicy() {
-        if showInDock {
-            NSApp.setActivationPolicy(.regular)
-        } else {
-            NSApp.setActivationPolicy(.accessory)
+        // Only attempt to set activation policy if we are running in a regular app context
+        if NSApp != nil {
+            if showInDock {
+                NSApp.setActivationPolicy(.regular)
+            } else {
+                NSApp.setActivationPolicy(.accessory)
+            }
         }
         UserDefaults.standard.set(showInDock, forKey: dockPersistenceKey)
     }
     
-    func refreshDisplays() {
+    public func refreshDisplays() {
         var newDisplays: [Display] = []
         let savedBrightness = UserDefaults.standard.dictionary(forKey: persistenceKey) as? [String: Double] ?? [:]
         let savedContrast = UserDefaults.standard.dictionary(forKey: contrastKey) as? [String: Double] ?? [:]
@@ -124,19 +144,40 @@ class BrightnessManager: ObservableObject {
             display.volume = savedVolume[name] ?? 0.5
             display.supportsDDC = !isInternal
             
+            // Try to sync with hardware actual state if external and not previously saved
+            if !isInternal {
+                if let hardwareBrightness = DDCManager.getBrightness(for: displayID) {
+                    display.brightness = hardwareBrightness
+                    display.isSoftwareControl = false
+                } else {
+                    display.isSoftwareControl = true
+                }
+                
+                if let hardwareContrast = DDCManager.getContrast(for: displayID) {
+                    display.contrast = hardwareContrast
+                }
+                
+                if let hardwareVolume = DDCManager.getVolume(for: displayID) {
+                    display.volume = hardwareVolume
+                }
+            }
+            
             newDisplays.append(display)
             
-            // Apply initial brightness
+            // Apply initial brightness (to ensure app state and hardware are aligned)
             if isInternal {
                 setInternalBrightness(for: displayID, to: Float(display.brightness))
             } else {
-                DDCManager.setBrightness(for: displayID, to: display.brightness)
+                if !DDCManager.setBrightness(for: displayID, to: display.brightness) {
+                    SoftwareDimmingManager.setBrightness(for: displayID, to: display.brightness)
+                    display.isSoftwareControl = true
+                }
             }
         }
         self.displays = newDisplays
     }
 
-    func setBrightness(for display: Display, to value: Double) {
+    public func setBrightness(for display: Display, to value: Double) {
         if let index = displays.firstIndex(where: { $0.id == display.id }) {
             displays[index].brightness = value
         }
@@ -144,18 +185,38 @@ class BrightnessManager: ObservableObject {
         if display.isInternal {
             setInternalBrightness(for: display.id, to: Float(value))
         } else {
-            DDCManager.setBrightness(for: display.id, to: value)
+            // "True Black" Hybrid Mode logic
+            // We use DDC for the 0.1 to 1.0 range.
+            // When below 0.1, we keep DDC at 0 and use software dimming for the rest.
+            
+            let hardwareValue: Double
+            let softwareValue: Double
+            
+            if value >= 0.1 {
+                hardwareValue = (value - 0.1) / 0.9
+                softwareValue = 1.0
+            } else {
+                hardwareValue = 0.0
+                softwareValue = value / 0.1
+            }
+
+            let success = DDCManager.setBrightness(for: display.id, to: hardwareValue)
+            
+            if let index = displays.firstIndex(where: { $0.id == display.id }) {
+                displays[index].isSoftwareControl = !success || value < 0.1
+            }
+
+            if !success {
+                SoftwareDimmingManager.setBrightness(for: display.id, to: value)
+            } else {
+                SoftwareDimmingManager.setBrightness(for: display.id, to: softwareValue)
+            }
         }
         
         if syncAllDisplays {
             for i in displays.indices {
                 if displays[i].id != display.id {
-                    displays[i].brightness = value
-                    if displays[i].isInternal {
-                        setInternalBrightness(for: displays[i].id, to: Float(value))
-                    } else {
-                        DDCManager.setBrightness(for: displays[i].id, to: value)
-                    }
+                    setBrightness(for: displays[i], to: value)
                 }
             }
         }
@@ -165,36 +226,114 @@ class BrightnessManager: ObservableObject {
         UserDefaults.standard.set(saved, forKey: persistenceKey)
     }
 
-    func setContrast(for display: Display, to value: Double) {
+    public func setContrast(for display: Display, to value: Double) {
         if let index = displays.firstIndex(where: { $0.id == display.id }) {
             displays[index].contrast = value
         }
         if !display.isInternal {
-            DDCManager.setContrast(for: display.id, to: value)
+            _ = DDCManager.setContrast(for: display.id, to: value)
+            // Software contrast is currently not supported for HDMI displays
+            // due to potential color information loss.
         }
         var saved = UserDefaults.standard.dictionary(forKey: contrastKey) as? [String: Double] ?? [:]
         saved[display.name] = value
         UserDefaults.standard.set(saved, forKey: contrastKey)
     }
 
-    func setVolume(for display: Display, to value: Double) {
+    public func setVolume(for display: Display, to value: Double) {
         if let index = displays.firstIndex(where: { $0.id == display.id }) {
             displays[index].volume = value
         }
         if !display.isInternal {
-            DDCManager.setVolume(for: display.id, to: value)
+            _ = DDCManager.setVolume(for: display.id, to: value)
+            // Volume is strictly a hardware control; if DDC is blocked,
+            // we cannot change the monitor's internal volume.
         }
         var saved = UserDefaults.standard.dictionary(forKey: volumeKey) as? [String: Double] ?? [:]
         saved[display.name] = value
         UserDefaults.standard.set(saved, forKey: volumeKey)
     }
 
-    func toggleSync() {
+    public enum Preset: String, CaseIterable, Sendable {
+        case cinema, reading, night, outdoor, focus
+        
+        public var brightness: Double {
+            switch self {
+            case .cinema: return 0.8
+            case .reading: return 0.4
+            case .night: return 0.1
+            case .outdoor: return 1.0
+            case .focus: return 0.6
+            }
+        }
+        
+        public var icon: String {
+            switch self {
+            case .cinema: return "film"
+            case .reading: return "book"
+            case .night: return "moon.fill"
+            case .outdoor: return "sun.max"
+            case .focus: return "brain"
+            }
+        }
+
+        public var displayName: String {
+            return rawValue.capitalized
+        }
+    }
+    
+    private var hardwareUpdateTask: Task<Void, Never>?
+    
+    public func applyPreset(_ preset: Preset) {
+        // UI is updated instantly
+        for i in displays.indices {
+            displays[i].brightness = preset.brightness
+        }
+        OSDManager.shared.show(brightness: preset.brightness, icon: preset.icon)
+        
+        // Start a new task that cancels the previous one
+        hardwareUpdateTask?.cancel()
+        
+        hardwareUpdateTask = Task { @MainActor in
+            // Wait for 100ms to allow more clicks to arrive before starting work
+            try? await Task.sleep(nanoseconds: 100 * 1_000_000)
+            if Task.isCancelled { return }
+            
+            for display in displays {
+                if Task.isCancelled { return }
+                
+                // Hardware updates are now serialized within this MainActor task.
+                await setHardwareBrightnessAsync(for: display, to: preset.brightness)
+            }
+        }
+    }
+    
+    private func setHardwareBrightnessAsync(for display: Display, to value: Double) async {
+        if display.isInternal {
+            setInternalBrightness(for: display.id, to: Float(value))
+        } else {
+            // We run the slow DDC/I2C discovery on a background thread so it never blocks the Main Thread.
+            // Explicitly capture immutable values to avoid 'display' or 'self' capture issues.
+            let displayID = display.id
+            let success = await Task.detached(priority: .background) {
+                return DDCManager.setBrightness(for: displayID, to: value)
+            }.value
+            
+            // If hardware failed or it's HDMI on Silicon, use software
+            if !success {
+                SoftwareDimmingManager.setBrightness(for: displayID, to: value)
+            } else {
+                SoftwareDimmingManager.setBrightness(for: displayID, to: 1.0)
+            }
+        }
+    }
+
+    public func toggleSync() {
         syncAllDisplays.toggle()
         UserDefaults.standard.set(syncAllDisplays, forKey: syncKey)
     }
 
-    func toggleAutostart() {
+    public func toggleAutostart() {
         if #available(macOS 13.0, *) {
             do {
                 if autostartEnabled {
@@ -209,7 +348,7 @@ class BrightnessManager: ObservableObject {
         }
     }
 
-    func checkAutostartStatus() {
+    public func checkAutostartStatus() {
         if #available(macOS 13.0, *) {
             autostartEnabled = SMAppService.mainApp.status == .enabled
         }

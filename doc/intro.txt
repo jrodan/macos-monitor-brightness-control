@@ -1,0 +1,31 @@
+# Brightness Control - User Guide
+
+Welcome to Brightness Control for macOS. This app allows you to control the brightness of your monitors directly from your menu bar.
+
+## Monitor Types
+
+### 1. Built-in Display (Apple Silicon MacBooks / iMacs)
+- **Control Method**: Native Apple API.
+- **Support**: 100% Native. Supports hardware-level dimming and True Tone.
+
+### 2. External DDC/CI Monitors
+- **Control Method**: DDC/CI (Display Data Channel).
+- **Communication**: The app sends commands directly to your monitor's internal hardware.
+- **Tip**: Ensure "DDC/CI" is enabled in your monitor's OSD (Physical menu buttons).
+- **Hard Limit**: Some monitors do not support DDC commands over certain cables (e.g., some Hubs or older HDMI cables).
+
+### 3. Non-DDC External Monitors
+- **Control Method**: Hybrid Software Dimming.
+- **Mechanism**: The app applies a semi-transparent black overlay to the screen to simulate lower brightness.
+- **Tip**: This is used automatically if DDC is unavailable or if you enable "Software Dimming" in settings.
+
+## How to use
+
+- **Menu Bar**: Click the sun icon in the menu bar to adjust brightness sliders for individual monitors.
+- **Sync**: Use the "Link All" or "Native Sync" options to control multiple displays at once.
+- **Scene Gallery**: Enable presets for different environments like "Writing", "Design", or "Coding".
+
+## Troubleshooting
+
+- **No control on external monitor**: Check your cable connection. Try using a direct USB-C to DisplayPort/HDMI cable rather than a hub.
+- **Menu Bar icon is missing**: Re-launch the app from your Applications folder.

@@ -31,4 +31,8 @@ You are the expert Swift & macOS development agent for the **BrightnessControl**
 
 ## Build & CI
 - All changes must pass the `swift build` and `./package_app.sh` tests.
+- **Testing**: Maintain and update unit tests in the `Tests/` directory for any logic changes in `BrightnessControlCore`. Ensure `swift test` passes before finalizing work.
 - Ensure any new assets are added to the `.xcassets` catalog and included in `Package.swift` resources.
+
+## Git Workflow
+- **CRITICAL**: Do not perform any `git commit` or `git push` operations without explicit user approval. Always ask before committing changes.

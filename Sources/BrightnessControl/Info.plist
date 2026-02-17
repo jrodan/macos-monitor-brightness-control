@@ -9,11 +9,11 @@
     <key>CFBundleExecutable</key>
     <string>BrightnessControl</string>
     <key>CFBundleVersion</key>
-    <string>1.0</string>
+    <string>1.1</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
-    <key>CFBundleIconName</key>
-    <string>AppIcon</string>
+    <string>1.1</string>
+    <key>CFBundleIconFile</key>
+    <string>MainAppIcon</string>
     <key>LSUIElement</key>
     <true/> <!-- Menu bar app, no dock icon -->
 </dict>
