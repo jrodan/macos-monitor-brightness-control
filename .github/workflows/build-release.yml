@@ -50,12 +50,39 @@ jobs:
           name: BrightnessControl-App
           path: BrightnessControl.app
           
-      - name: Create ZIP
-        run: zip -r BrightnessControl.zip BrightnessControl.app
-        
-      - name: Release
+      - name: Create ZIP and Cask
+        run: |
+          chmod +x release.sh
+          ./release.sh
+          
+      - name: Create Release
+        id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          files: BrightnessControl.zip
+          files: |
+            BrightnessControl.zip
+            brightness-control.rb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew Tap
+        if: success()
+        run: |
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Clone the tap repository (Replace with your actual tap repo name)
+          git clone https://x-access-token:${{ secrets.HOMEBREW_TAP_TOKEN }}@github.com/${{ github.repository_owner }}/homebrew-tap.git homebrew-tap
+          
+          # Update the cask file
+          mkdir -p homebrew-tap/Casks
+          cp brightness-control.rb homebrew-tap/Casks/brightness-control.rb
+          
+          # Commit and push
+          cd homebrew-tap
+          git add Casks/brightness-control.rb
+          git commit -m "Update Brightness Control to ${GITHUB_REF_NAME#v}"
+          git push origin main
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
