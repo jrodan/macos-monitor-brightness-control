@@ -7,9 +7,13 @@ GITHUB_USER="jrodan"
 GITHUB_REPO="brightness-control-macos"
 
 # 1. Build and package the app first
-echo "--- Step 1: Building and Packaging App ---"
-chmod +x package_app.sh
-./package_app.sh
+if [ ! -d "$APP_NAME.app" ]; then
+    echo "--- Step 1: Building and Packaging App ---"
+    chmod +x package_app.sh
+    ./package_app.sh
+else
+    echo "--- Step 1: Skipping Build (App already exists) ---"
+fi
 
 if [ ! -d "$APP_NAME.app" ]; then
     echo "Error: $APP_NAME.app not found. Build failed?"
