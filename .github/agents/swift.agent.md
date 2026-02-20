@@ -35,4 +35,5 @@ You are the expert Swift & macOS development agent for the **BrightnessControl**
 - Ensure any new assets are added to the `.xcassets` catalog and included in `Package.swift` resources.
 
 ## Git Workflow
-- **CRITICAL**: Do not perform any `git commit` or `git push` operations without explicit user approval. Always ask before committing changes.
+- **CRITICAL**: Do not perform any `git commit`, `git push` or `git tag` operations without explicit user approval. Always ask before making any changes to the remote repository.
+- **NEVER** push tags or branches automatically unless specifically requested for a release pipeline verify.

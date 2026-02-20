@@ -70,7 +70,7 @@ struct AboutView: View {
                 }
                 
                 Button(action: {
-                    if let url = URL(string: "https://github.com/jrodan/brightness-control-macos") {
+                    if let url = URL(string: "https://github.com/jrodan/macos-monitor-brightness-control") {
                         NSWorkspace.shared.open(url)
                     }
                 }) {

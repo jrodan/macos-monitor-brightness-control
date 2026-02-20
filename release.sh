@@ -4,7 +4,7 @@
 APP_NAME="BrightnessControl"
 ZIP_NAME="$APP_NAME.zip"
 GITHUB_USER="jrodan"
-GITHUB_REPO="brightness-control-macos"
+GITHUB_REPO="macos-monitor-brightness-control"
 
 # 1. Build and package the app first
 if [ ! -d "$APP_NAME.app" ]; then
